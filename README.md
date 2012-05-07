@@ -1,7 +1,8 @@
 eot_url_tool
 ============
 
-eot 포맷의 웹폰트의 라이센스 URL을 확인하거나, 변경할 수 있는 툴입니다.
+Microsoft WEFT로 만든 웹폰트의 URL을 변경시켜주는 프로그램입니다.
+eot 포맷의 웹폰트의 라이선스 URL을 확인하거나, 변경할 수 있습니다.
 해당 파일의 스펙은 http://www.w3.org/Submission/EOT/ 에서 참고하였습니다.
 
 
