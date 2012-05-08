@@ -1,8 +1,9 @@
 /**
- * EOT URL Setter.
- * Author: azki. (azki@azki.org)
+ * EOT URL TOOL.
+ * @Author azki. (azki@azki.org)
+ * @Version 1.1
  * Spec: http://www.w3.org/Submission/EOT/
- * Base code by eot-utils 1.0-1 (http://eot-utils.sourcearchive.com/documentation/1.0-1/main.html)
+ * BaseCode by eot-utils 1.0-1 (http://eot-utils.sourcearchive.com/documentation/1.0-1/main.html)
 **/
 
 #include <stdio.h>
@@ -14,6 +15,8 @@
 #define FSTYPE_EDITABLE 0x0008
 #define FSTYPE_NOSUBSETTING 0x0100
 #define FSTYPE_BITMAP 0x0200
+
+#define CS_XORKEY 0x50475342
 
 typedef struct {
 	unsigned long EOTSize;
@@ -61,35 +64,6 @@ typedef struct {
 	unsigned long EUDCFontSize;
 	unsigned char *EUDCFontData;
 } EOT_header;
-
-
-/* write_4le -- write a little endian unsigned long */
-static bool write_4le(FILE *f, unsigned long x)
-{
-	unsigned char s[4];
-
-	s[0] = x & 0x000000ff;
-	s[1] = (x & 0x0000ff00) >> 8;
-	s[2] = (x & 0x00ff0000) >> 16;
-	s[3] = x >> 24;
-	return fwrite(s, 1, 4, f) == 4;
-}
-
-/* write_2le -- write a little endian unsigned short */
-static bool write_2le(FILE *f, unsigned short x)
-{
-	unsigned char s[2];
-
-	s[0] = x & 0x00ff;
-	s[1] = x >> 8;
-	return fwrite(s, 1, 2, f) == 2;
-}
-
-/* write_1 -- write one byte to file f */
-static bool write_1(FILE *f, unsigned char x)
-{
-	return fwrite(&x, 1, 1, f) == 1;
-}
 
 
 /* initialize_EOT_header -- fill an EOT struct with consistent values */
@@ -140,39 +114,34 @@ static void initialize_EOT_header(EOT_header *h)
 	h->EUDCFontSize = 0;
 	h->EUDCFontData = NULL;
 }
-/* putUTF8 -- write a character to stdout in UTF8 encoding */
-static void putUTF8(long c)
+
+
+/* write_4le -- write a little endian unsigned long */
+static bool write_4le(FILE *f, unsigned long x)
 {
-	if (c <= 0x7F) {												/* Leave ASCII encoded */
-		putchar(c);
-	} else if (c <= 0x07FF) {							 /* 110xxxxx 10xxxxxx */
-		putchar(0xC0 | (c >> 6));
-		putchar(0x80 | (c & 0x3F));
-	} else if (c <= 0xFFFF) {							 /* 1110xxxx + 2 */
-		putchar(0xE0 | (c >> 12));
-		putchar(0x80 | ((c >> 6) & 0x3F));
-		putchar(0x80 | (c & 0x3F));
-	} else if (c <= 0x1FFFFF) {						 /* 11110xxx + 3 */
-		putchar(0xF0 | (c >> 18));
-		putchar(0x80 | ((c >> 12) & 0x3F));
-		putchar(0x80 | ((c >> 6) & 0x3F));
-		putchar(0x80 | (c & 0x3F));
-	} else if (c <= 0x3FFFFFF) {									/* 111110xx + 4 */
-		putchar(0xF8 | (c >> 24));
-		putchar(0x80 | ((c >> 18) & 0x3F));
-		putchar(0x80 | ((c >> 12) & 0x3F));
-		putchar(0x80 | ((c >> 6) & 0x3F));
-		putchar(0x80 | (c & 0x3F));
-	} else if (c <= 0x7FFFFFFF) {								 /* 1111110x + 5 */
-		putchar(0xFC | (c >> 30));
-		putchar(0x80 | ((c >> 24) & 0x3F));
-		putchar(0x80 | ((c >> 18) & 0x3F));
-		putchar(0x80 | ((c >> 12) & 0x3F));
-		putchar(0x80 | ((c >> 6) & 0x3F));
-		putchar(0x80 | (c & 0x3F));
-	} else {													/* Not a valid character... */
-		printf("<%ld>", c);
-	} 
+	unsigned char s[4];
+
+	s[0] = x & 0x000000ff;
+	s[1] = (x & 0x0000ff00) >> 8;
+	s[2] = (x & 0x00ff0000) >> 16;
+	s[3] = x >> 24;
+	return fwrite(s, 1, 4, f) == 4;
+}
+
+/* write_2le -- write a little endian unsigned short */
+static bool write_2le(FILE *f, unsigned short x)
+{
+	unsigned char s[2];
+
+	s[0] = x & 0x00ff;
+	s[1] = x >> 8;
+	return fwrite(s, 1, 2, f) == 2;
+}
+
+/* write_1 -- write one byte to file f */
+static bool write_1(FILE *f, unsigned char x)
+{
+	return fwrite(&x, 1, 1, f) == 1;
 }
 
 /* write_EOT_header -- write an EOT header to file f */
@@ -348,21 +317,53 @@ static bool read_EOT_header(FILE *f, EOT_header *h)
 	return true;
 }
 
-#define CS_XORKEY 0x50475342
-unsigned long GetByteCheckSum( unsigned char* pucBuffer,
- unsigned short cbLength )
+/* putUTF8 -- write a character to stdout in UTF8 encoding */
+static void putUTF8(long c)
 {
-int i;
-unsigned long ulCS = 0;
-for(i = 0; i < cbLength; i++) {
-ulCS += pucBuffer[i];
-}
-return ulCS ^ CS_XORKEY;
+	if (c <= 0x7F) {												/* Leave ASCII encoded */
+		putchar(c);
+	} else if (c <= 0x07FF) {							 /* 110xxxxx 10xxxxxx */
+		putchar(0xC0 | (c >> 6));
+		putchar(0x80 | (c & 0x3F));
+	} else if (c <= 0xFFFF) {							 /* 1110xxxx + 2 */
+		putchar(0xE0 | (c >> 12));
+		putchar(0x80 | ((c >> 6) & 0x3F));
+		putchar(0x80 | (c & 0x3F));
+	} else if (c <= 0x1FFFFF) {						 /* 11110xxx + 3 */
+		putchar(0xF0 | (c >> 18));
+		putchar(0x80 | ((c >> 12) & 0x3F));
+		putchar(0x80 | ((c >> 6) & 0x3F));
+		putchar(0x80 | (c & 0x3F));
+	} else if (c <= 0x3FFFFFF) {									/* 111110xx + 4 */
+		putchar(0xF8 | (c >> 24));
+		putchar(0x80 | ((c >> 18) & 0x3F));
+		putchar(0x80 | ((c >> 12) & 0x3F));
+		putchar(0x80 | ((c >> 6) & 0x3F));
+		putchar(0x80 | (c & 0x3F));
+	} else if (c <= 0x7FFFFFFF) {								 /* 1111110x + 5 */
+		putchar(0xFC | (c >> 30));
+		putchar(0x80 | ((c >> 24) & 0x3F));
+		putchar(0x80 | ((c >> 18) & 0x3F));
+		putchar(0x80 | ((c >> 12) & 0x3F));
+		putchar(0x80 | ((c >> 6) & 0x3F));
+		putchar(0x80 | (c & 0x3F));
+	} else {													/* Not a valid character... */
+		printf("<%ld>", c);
+	} 
 }
 
+unsigned long GetByteCheckSum(unsigned char* pucBuffer, unsigned short cbLength)
+{
+	int i;
+	unsigned long ulCS = 0;
+	for(i = 0; i < cbLength; i++) {
+		ulCS += pucBuffer[i];
+	}
+	return ulCS ^ CS_XORKEY;
+}
 
-/* add_rootstring -- add a URL to the EOT header */
-static void add_rootstring(char *url, EOT_header *h)
+/* addRootString -- add a URL to the EOT header */
+static void addRootString(char *url, EOT_header *h)
 {
 	unsigned long j, len;
 	len = 2 * strlen(url) + 2;
@@ -381,15 +382,19 @@ static void add_rootstring(char *url, EOT_header *h)
 	h->RootStringCheckSum = GetByteCheckSum(h->RootString, h->RootStringSize);
 	h->EOTSize += len;
 }
-
 static void resetRootString(EOT_header *h)
 {
 	h->EOTSize -= h->RootStringSize;
 	h->RootStringSize = 0;
 	h->RootStringCheckSum = GetByteCheckSum(h->RootString, h->RootStringSize);
 }
-
-
+static void printRootString(EOT_header h){
+	unsigned short i;
+	long c;
+	for (i = 0; i < h.RootStringSize; i += 2) /* UTF-16LE -> UTF-8 */
+		if ((c = h.RootString[i] + 256 * h.RootString[i+1])) putUTF8(c);
+		else putUTF8(' ');
+}
 /* usage -- print usage message and exit */
 static void usage(char *progname)
 {
@@ -402,51 +407,42 @@ static void errx(char * a, void * b){
 	printf(a, b);
 	exit(-1);
 }
-static void printRootString(EOT_header h){
-	unsigned short i;
-	long c;
-	for (i = 0; i < h.RootStringSize; i += 2) /* UTF-16LE -> UTF-8 */
-		if ((c = h.RootString[i] + 256 * h.RootString[i+1])) putUTF8(c);
-		else putUTF8(' ');
-}
 
 int main(int argc, char *argv[])
 {
 	FILE *f1;
 	FILE *f2;
 	EOT_header header;
-	int c;
-	unsigned long i; 
+	unsigned long i;
+	unsigned char * fontData;
 
 	if (argc < 2) usage(argv[0]);
-	if (!(f1 = fopen((const char *)argv[1], "rb"))) return -1;
+	if (!(f1 = fopen((const char *)argv[1], "rb"))) errx("Could not read font file %s. (code:1)", argv[1]);
 	initialize_EOT_header(&header);
 	//READ
-	if (!read_EOT_header(f1, &header)) errx("Could not read font file %s.", argv[1]);
+	if (!read_EOT_header(f1, &header)) errx("Could not read font file %s. (code:2)", argv[1]);
 	if (argc == 2) {
 		printRootString(header);
 		exit(1);
 	}
-
-	//SET
-	resetRootString(&header);
-	for (i = 3; i < argc; i++) add_rootstring(argv[i], &header);
-
-	if (!(f2 = fopen((const char *)argv[2], "wb"))) return -1;
-	//WRITE
+	if (!(fontData = (unsigned char *) malloc(header.FontDataSize))) errx("Memory allocation error. (code:11)", argv[1]);
+	if (fread(fontData, 1, header.FontDataSize, f1) != header.FontDataSize) errx("Could not read font file %s. (code:3)", argv[1]);
+	fclose(f1);
+	
 	if (!(header.fsType & FSTYPE_EDITABLE) &&
 		!(header.fsType & FSTYPE_PREVIEW) &&
 		header.fsType & FSTYPE_RESTRICTED
 	) errx("%s does not allow embedding.", argv[1]);
 	if (header.fsType & FSTYPE_BITMAP) errx("Unsupported (%s requires bitmap embedding).", argv[1]);
 	
-	if (!write_EOT_header(f2, header)) errx("Could not write EOT file", argv[2]);
-	for (i = 0; i < header.FontDataSize; i++) {
-		c = getc(f1);
-		if (c == EOF) errx("Font data size != file read?", argv[2]);
-		putc(c, f2);
-	}
-	fclose(f1);
+	//SET
+	resetRootString(&header);
+	for (i = 3; i < argc; i++) addRootString(argv[i], &header);
+	
+	//WRITE
+	if (!(f2 = fopen((const char *)argv[2], "wb"))) errx("Could not write EOT file : %s. (code:101)", argv[2]);
+	if (!write_EOT_header(f2, header)) errx("Could not write EOT file : %s. (code:102)", argv[2]);
+	if (fwrite(fontData, 1, header.FontDataSize, f2) != header.FontDataSize) errx("Could not write EOT file : %s. (code:103)", argv[2]);
 	fclose(f2);
 	printf("complete.");
 	return 0;
